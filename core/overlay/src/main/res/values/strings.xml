@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="overlay_friction_title">Contenido bloqueado</string>
+    <string name="overlay_friction_message">El contenido %1$s coincide con una regla de bloqueo.</string>
+    <string name="overlay_friction_dismiss">Volver</string>
+
+    <string name="friction_instruction">Espera a que termine el tiempo y transcribe el texto completo para desbloquear.</string>
+    <string name="friction_required_text_label">Texto para transcribir</string>
+    <string name="friction_input_label">Escribe el texto aquí</string>
+    <string name="friction_timer_remaining">Tiempo restante</string>
+    <string name="friction_unlock">Desbloquear</string>
+    <string name="friction_paste_warning">Acción no permitida: Debes escribir el texto manualmente</string>
+    <string name="friction_wait_hint">Aún no puedes desbloquear. Espera y completa la transcripción exacta.</string>
+    <string name="protection_overlay_title">Protección activa</string>
+    <string name="protection_overlay_accessibility">No puedes desactivar la protección desde los ajustes de accesibilidad. Vuelve a una pantalla normal para continuar.</string>
+    <string name="protection_overlay_app_info">No puedes detener, borrar datos ni desinstalar BlockBuster mientras esta pantalla esté abierta.</string>
+    <string name="protection_overlay_device_admin">No puedes modificar los administradores de dispositivo mientras esta pantalla esté abierta.</string>
+    <string name="protection_overlay_admin_attempt">Se detectó un intento de desactivar la protección del dispositivo.</string>
+</resources>

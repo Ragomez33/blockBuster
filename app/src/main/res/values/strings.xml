@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BlockBuster</string>
+
+    <string name="device_admin_label">BlockBuster device administrator</string>
+    <string name="device_admin_disable_warning">BlockBuster está protegiendo este dispositivo. Si desactivas el administrador, perderás la capa de protección contra desinstalación.</string>
+
+    <string name="monitoring_channel_name">Screen monitoring</string>
+    <string name="monitoring_channel_description">Keeps BlockBuster active while it watches for blocked apps.</string>
+    <string name="monitoring_notification_title">BlockBuster is active</string>
+    <string name="monitoring_notification_text">Monitoring blocked apps and timers.</string>
+
+    <string name="home_title">BlockBuster</string>
+    <string name="home_subtitle">Recupera el control de tu tiempo en pantalla.</string>
+    <string name="home_status_section">Estado del sistema</string>
+    <string name="home_accessibility_title">Servicio de accesibilidad</string>
+    <string name="home_accessibility_granted">Activo y detectando cambios de pantalla.</string>
+    <string name="home_accessibility_missing">Necesario para detectar la app en primer plano.</string>
+    <string name="home_overlay_title">Permiso de superposición</string>
+    <string name="home_overlay_granted">Puede mostrar la pantalla de fricción.</string>
+    <string name="home_overlay_missing">Necesario para mostrar la pantalla de fricción.</string>
+    <string name="home_monitoring_title">Servicio de monitoreo</string>
+    <string name="home_monitoring_running">En ejecución en segundo plano.</string>
+    <string name="home_monitoring_stopped">Detenido.</string>
+    <string name="home_enable">Configurar</string>
+    <string name="home_start_monitoring">Iniciar monitoreo</string>
+    <string name="home_manage_rules">Gestionar reglas</string>
+    <string name="home_active_rules">%1$d reglas activas</string>
+    <string name="home_refresh">Actualizar estado</string>
+
+    <string name="rules_title">Reglas de bloqueo</string>
+    <string name="rules_empty">Todavía no hay reglas. Añade una regla para empezar.</string>
+    <string name="rules_add">Añadir regla</string>
+    <string name="rules_delete">Eliminar regla</string>
+    <string name="rules_add_title">Nueva regla</string>
+    <string name="rules_cancel">Cancelar</string>
+    <string name="rules_add_confirm">Añadir</string>
+    <string name="rules_pattern_label">Patrón</string>
+    <string name="rules_type_label">Tipo de regla</string>
+    <string name="rules_pattern_required">El patrón no puede estar vacío.</string>
+    <string name="rule_type_domain">Dominio</string>
+    <string name="rule_type_shorts">Shorts</string>
+    <string name="rule_type_reels">Reels</string>
+    <string name="common_back">Volver</string>
+</resources>

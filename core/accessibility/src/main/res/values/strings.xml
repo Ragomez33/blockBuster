@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_label">BlockBuster monitoring</string>
+    <string name="accessibility_service_description">Detects when a blocked app comes to the foreground so BlockBuster can show a friction screen.</string>
+</resources>
