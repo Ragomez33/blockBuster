@@ -78,6 +78,7 @@ class OverlayManager @Inject constructor(
                 sessionStore.obtain(
                     target = config.packageName,
                     requiredText = context.getString(R.string.friction_discipline_text),
+                    windowMillis = config.frictionWindowMillis,
                 )
             } else {
                 null

@@ -4,6 +4,7 @@ import com.blockbuster.core.common.model.BlockRule
 import com.blockbuster.core.common.model.BlockRuleType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DefaultBlockRuleMatcherTest {
@@ -73,6 +74,72 @@ class DefaultBlockRuleMatcherTest {
         )
 
         assertEquals(low, match?.rule)
+    }
+
+    @Test
+    fun matchesPackageSignatureWithoutTargetText() {
+        val rule = rule(
+            id = 1,
+            pattern = "com.zhiliaoapp.musically",
+            type = BlockRuleType.PACKAGE,
+        )
+
+        val match = matcher.findMatch(
+            target = null,
+            rules = listOf(rule),
+            detectedAtEpochMillis = 1_000L,
+            packageName = "com.zhiliaoapp.musically",
+        )
+
+        assertEquals(rule, match?.rule)
+        assertEquals("com.zhiliaoapp.musically", match?.normalizedTarget)
+    }
+
+    @Test
+    fun packageSignatureDoesNotMatchDifferentPackage() {
+        val rule = rule(
+            id = 1,
+            pattern = "com.zhiliaoapp.musically",
+            type = BlockRuleType.PACKAGE,
+        )
+
+        assertNull(
+            matcher.findMatch(
+                target = null,
+                rules = listOf(rule),
+                detectedAtEpochMillis = 1_000L,
+                packageName = "com.android.chrome",
+            ),
+        )
+    }
+
+    @Test
+    fun matchesGenericKeywords() {
+        val rule = rule(id = 1, pattern = "visual search", type = BlockRuleType.KEYWORD)
+
+        val match = matcher.findMatch(
+            target = "Try Visual Search on this image",
+            rules = listOf(rule),
+            detectedAtEpochMillis = 1_000L,
+        )
+
+        assertEquals(rule, match?.rule)
+    }
+
+    @Test
+    fun matchesKeywordInAccessibilityClassName() {
+        val rule = rule(id = 1, pattern = "reels", type = BlockRuleType.KEYWORD)
+
+        val match = matcher.findMatch(
+            target = null,
+            rules = listOf(rule),
+            detectedAtEpochMillis = 1_000L,
+            packageName = "com.instagram.android",
+            className = "com.instagram.android.ReelsViewerActivity",
+        )
+
+        assertEquals(rule, match?.rule)
+        assertTrue(match?.normalizedTarget?.contains("reels") == true)
     }
 
     @Test

@@ -5,6 +5,14 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+fun configValue(name: String): String =
+    providers.gradleProperty(name).orNull
+        ?: providers.environmentVariable(name).orNull
+        ?: ""
+
+fun String.asBuildConfigString(): String =
+    "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 android {
     namespace = "com.blockbuster.app"
     compileSdk = 37
@@ -15,6 +23,16 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
+        buildConfigField(
+            "String",
+            "BINANCE_PAY_URL",
+            configValue("BINANCE_PAY_URL").asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "PAYPAL_URL",
+            configValue("PAYPAL_URL").asBuildConfigString(),
+        )
     }
 
     buildTypes {
@@ -29,6 +47,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -52,6 +71,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:accessibility"))
     implementation(project(":core:overlay"))
+    implementation(project(":core:network"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

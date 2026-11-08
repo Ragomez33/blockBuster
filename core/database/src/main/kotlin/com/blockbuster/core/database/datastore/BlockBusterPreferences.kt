@@ -21,3 +21,10 @@ internal object PreferenceKeys {
     val ACTIVE_TIMER_EXPIRES_AT = longPreferencesKey("active_timer_expires_at")
     val MONITORING_ENABLED = booleanPreferencesKey("monitoring_enabled")
 }
+
+internal object LicensePreferenceKeys {
+    val USER_ID = stringPreferencesKey("license_user_id")
+    val EXPIRES_AT = longPreferencesKey("premium_expires_at")
+    val PAYMENT_PROVIDER = stringPreferencesKey("premium_payment_provider")
+    val LAST_SYNC_AT = longPreferencesKey("premium_last_sync_at")
+}

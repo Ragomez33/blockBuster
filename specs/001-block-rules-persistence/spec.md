@@ -98,7 +98,7 @@ tiempo después de reiniciar la aplicación.
 - Qué ocurre cuando se intenta guardar una regla con un patrón vacío o compuesto solo por espacios?
 - Qué ocurre cuando se repite el mismo patrón para el mismo tipo de regla?
 - Qué ocurre cuando se intenta actualizar o eliminar una regla que ya no existe?
-- Qué ocurre cuando se solicita un tipo de regla que no es uno de los tres tipos permitidos?
+- Qué ocurre cuando se solicita un tipo de regla que no es uno de los tipos permitidos?
 - Qué ocurre si el almacenamiento local falla, está corrupto o no puede abrirse?
 - Qué ocurre si dos cambios sobre la misma regla se producen casi simultáneamente?
 - Qué ocurre si se registra un bloqueo después de que su regla fue eliminada?
@@ -110,10 +110,10 @@ tiempo después de reiniciar la aplicación.
 
 - **FR-001**: El sistema MUST permitir crear una regla de bloqueo con un patrón, un tipo, un estado de habilitación y una marca de tiempo de creación.
 - **FR-002**: El sistema MUST asignar un identificador único y auto-generado a cada regla creada.
-- **FR-003**: El sistema MUST aceptar exclusivamente los tipos de regla `DOMAIN`, `KEYWORD_SHORTS` y `KEYWORD_REELS`.
+- **FR-003**: El sistema MUST aceptar los tipos de regla `DOMAIN`, `PACKAGE`, `KEYWORD`, `KEYWORD_SHORTS` y `KEYWORD_REELS`.
 - **FR-004**: El sistema MUST permitir actualizar el patrón, el tipo y el estado de habilitación de una regla existente.
 - **FR-005**: El sistema MUST permitir eliminar una regla existente por su identificador.
-- **FR-006**: El sistema MUST exponer un flujo reactivo con todas las reglas habilitadas, de modo que cada cambio se refleje sin reiniciar la aplicación.
+- **FR-006**: El sistema MUST exponer un flujo reactivo con todas las reglas habilitadas, incluyendo las reglas persistidas y las reglas generadas por los presets maestros habilitados, de modo que cada cambio se refleje sin reiniciar la aplicación.
 - **FR-007**: El sistema MUST permitir obtener las reglas habilitadas de un tipo concreto.
 - **FR-008**: El sistema MUST persistir cada regla de forma duradera para que sobreviva al cierre y reinicio de la aplicación.
 - **FR-009**: El sistema MUST persistir registros de auditoría de bloqueos con el identificador de la regla, el objetivo afectado y la marca de tiempo.
@@ -126,12 +126,16 @@ tiempo después de reiniciar la aplicación.
 - **FR-016**: El sistema MUST exportar el esquema de la base de datos para permitir la evolución controlada de su estructura.
 - **FR-017**: El sistema MUST devolver un resultado de error controlado cuando se intente actualizar o eliminar una regla inexistente.
 - **FR-018**: El sistema MUST permitir que las reglas se inyecten como dependencia en los módulos consumidores sin acoplarlos a la implementación de almacenamiento.
+- **FR-019**: El sistema MUST combinar las reglas persistidas habilitadas con las reglas generadas por los presets maestros habilitados para formar el conjunto de reglas activas.
+- **FR-020**: Las reglas generadas por presets MUST NOT requerir filas propias en la base de datos ni alterar las reglas persistidas por la persona usuaria.
+- **FR-021**: El estado habilitado de un preset MUST persistirse de forma reactiva y duradera en el almacenamiento de preferencias local.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Regla de bloqueo**: Representa un criterio configurado para bloquear contenido. Contiene un identificador único, un patrón (dominio o palabra clave), un tipo (`DOMAIN`, `KEYWORD_SHORTS`, `KEYWORD_REELS`), un estado de habilitación y la fecha de creación.
+- **Regla de bloqueo**: Representa un criterio configurado para bloquear contenido. Contiene un identificador único, un patrón (dominio, paquete o palabra clave), un tipo (`DOMAIN`, `PACKAGE`, `KEYWORD`, `KEYWORD_SHORTS`, `KEYWORD_REELS`), un estado de habilitación y la fecha de creación.
+- **Estado de preset**: Indica qué categorías maestras están habilitadas. Se persiste en preferencias y alimenta la generación de reglas activas sin crear filas en Room.
 - **Registro de auditoría de bloqueo**: Representa un bloqueo ocurrido. Contiene un identificador único, la referencia a la regla aplicada, el objetivo bloqueado y la marca de tiempo del bloqueo.
-- **Tipo de regla**: Categoría cerrada que determina cómo se interpreta el patrón: dominio, palabra clave para Shorts o palabra clave para Reels.
+- **Tipo de regla**: Categoría cerrada que determina cómo se interpreta el patrón: dominio, firma de paquete, palabra clave genérica, palabra clave para Shorts o palabra clave para Reels.
 - **Resultado de operación**: Envoltura explícita que indica si una operación de persistencia terminó correctamente o con un error controlado.
 
 ## Success Criteria *(mandatory)*
@@ -144,15 +148,19 @@ tiempo después de reiniciar la aplicación.
 - **SC-004**: El 100 % de los fallos de almacenamiento simulados se comunica como un resultado de error controlado, con cero bloqueos o cierres inesperados de la aplicación.
 - **SC-005**: El 100 % de los registros de auditoría conserva el identificador de regla, el objetivo y la marca de tiempo originales después de reiniciar la aplicación.
 - **SC-006**: Las operaciones de almacenamiento no introducen pausas perceptibles en la interfaz ni bloquean el hilo principal.
+- **SC-007**: El 100 % de los cambios en el estado de un preset se refleja en el flujo de reglas activas en menos de 1 segundo, sin reiniciar la aplicación.
 
 ## Assumptions
 
 - Una regla se considera "activa" cuando su estado de habilitación es verdadero.
+- Las reglas de los presets maestros se generan en memoria a partir de un catálogo estático y no se persisten como filas de Room; solo se persiste el estado habilitado de cada preset.
+- Las reglas generadas por presets usan identificadores estables que no colisionan con los identificadores auto-generados por la base de datos.
 - Los patrones duplicados para el mismo tipo están permitidos porque el requisito no define una restricción de unicidad.
 - Las marcas de tiempo se almacenan como milisegundos desde la época y no dependen de la zona horaria del dispositivo.
 - Los registros de auditoría se conservan de forma independiente de la regla referenciada; no se eliminan en cascada.
 - La validación de patrones vacíos o demasiado largos se resolverá en la capa que crea la regla; esta capa debe aceptar el valor tal como llega y no corromperlo.
 - El alcance de esta iteración es local: no incluye sincronización remota, cuentas de usuario ni exportación de datos.
 - La capa de persistencia es consumida por otros módulos de la aplicación; no incluye pantallas ni flujos de interfaz propios.
+- La pantalla de creación manual de reglas fue retirada de la navegación principal por `006-preset-master-dashboard`; el repositorio sigue soportando el CRUD de reglas persistidas para consumidores internos y futuras interfaces avanzadas.
 - Se reutiliza el envoltorio de resultados y los modelos base existentes en `:core:common` cuando sean compatibles.
 - Restricciones técnicas impuestas por el solicitante: persistencia local con Room, inyección de dependencias con Hilt, acceso a datos estrictamente sobre un contexto de entrada/salida, observación exclusiva mediante flujos reactivos, ausencia de LiveData y exportación del esquema de base de datos.

@@ -1,4 +1,4 @@
-﻿package com.blockbuster.core.overlay
+package com.blockbuster.core.overlay
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -12,6 +12,12 @@ import com.blockbuster.core.common.result.AppResult
 import com.blockbuster.core.overlay.matching.DefaultBlockRuleMatcher
 import com.blockbuster.core.overlay.support.FakeBlockRulesRepository
 import com.blockbuster.core.overlay.support.FakeOverlayController
+import com.blockbuster.core.overlay.focus.FocusModeRuleProvider
+import com.blockbuster.core.overlay.matching.BlocklistMatcher
+import com.blockbuster.core.overlay.premium.PremiumRuleProvider
+import com.blockbuster.core.overlay.support.FakeBlocklistRepository
+import com.blockbuster.core.overlay.support.FakeFocusSessionRepository
+import com.blockbuster.core.overlay.support.FakePremiumRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -107,7 +113,13 @@ class OverlayCoordinatorAuditTest {
         protectionEventBus = MutableProtectionEventBus(),
         overlayController = overlay,
         repository = repository,
+        blocklistRepository = FakeBlocklistRepository(),
+        focusSessionRepository = FakeFocusSessionRepository(),
+        premiumRepository = FakePremiumRepository(),
         matcher = DefaultBlockRuleMatcher(),
+        blocklistMatcher = BlocklistMatcher(),
+        focusModeRuleProvider = FocusModeRuleProvider(),
+        premiumRuleProvider = PremiumRuleProvider(),
         scope = scope,
     )
 

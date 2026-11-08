@@ -43,3 +43,6 @@
   contención disponible sin prometer un bloqueo imposible con un overlay normal.
 - No existe `.specify/extensions.yml`, por lo que no se ejecutaron hooks ni se
   creó una rama de git.
+- Actualizada para cubrir la coincidencia por firma de paquete, la evaluación de
+  palabras clave sobre la clase de pantalla y las reglas generadas por los
+  presets maestros (`006-preset-master-dashboard`).

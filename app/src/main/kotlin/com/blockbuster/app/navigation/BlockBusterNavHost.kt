@@ -5,12 +5,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.blockbuster.app.ui.home.HomeScreen
-import com.blockbuster.app.ui.rules.RulesScreen
+import com.blockbuster.app.ui.premium.SubscriptionScreen
+import com.blockbuster.app.ui.settings.PrivacyPolicyScreen
+import com.blockbuster.app.ui.tabs.MainTabsScaffold
 
 object Routes {
-    const val HOME = "home"
-    const val RULES = "rules"
+    const val MAIN = "main"
+    const val BLOCKING = "tabs/blocking"
+    const val BLOCKLIST = "tabs/blocklist"
+    const val SETTINGS = "tabs/settings"
+    const val SUBSCRIPTION = "subscription"
+    const val PRIVACY = "settings/privacy"
 }
 
 @Composable
@@ -19,17 +24,19 @@ fun BlockBusterNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Routes.HOME,
+        startDestination = Routes.MAIN,
     ) {
-        composable(Routes.HOME) {
-            HomeScreen(
-                onManageRules = { navController.navigate(Routes.RULES) },
+        composable(Routes.MAIN) {
+            MainTabsScaffold(
+                onOpenSubscription = { navController.navigate(Routes.SUBSCRIPTION) },
+                onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
             )
         }
-        composable(Routes.RULES) {
-            RulesScreen(
-                onBack = { navController.popBackStack() },
-            )
+        composable(Routes.SUBSCRIPTION) {
+            SubscriptionScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.PRIVACY) {
+            PrivacyPolicyScreen(onBack = { navController.popBackStack() })
         }
     }
 }

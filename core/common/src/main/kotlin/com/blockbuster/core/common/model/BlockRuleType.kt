@@ -5,6 +5,8 @@ package com.blockbuster.core.common.model
  */
 enum class BlockRuleType {
     DOMAIN,
+    PACKAGE,
+    KEYWORD,
     KEYWORD_SHORTS,
     KEYWORD_REELS,
 }

@@ -33,4 +33,9 @@ data class FrictionConfig(
     val message: String,
     val dismissLabel: String,
     val mode: FrictionMode = FrictionMode.STANDARD,
-)
+    val frictionWindowMillis: Long = DEFAULT_FRICTION_WINDOW_MILLIS,
+) {
+    companion object {
+        const val DEFAULT_FRICTION_WINDOW_MILLIS = 60_000L
+    }
+}

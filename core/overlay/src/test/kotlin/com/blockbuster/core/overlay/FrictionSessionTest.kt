@@ -43,6 +43,15 @@ class FrictionSessionTest {
     }
 
     @Test
+    fun respectsCustomFrictionWindow() {
+        val custom = session.copy(windowMillis = 30_000L)
+
+        assertEquals(30_000L, custom.remainingMillis(nowElapsedRealtime = 1_000L))
+        assertEquals(10_000L, custom.remainingMillis(nowElapsedRealtime = 21_000L))
+        assertTrue(custom.copy(input = "texto exacto").canSubmit(nowElapsedRealtime = 31_000L))
+    }
+
+    @Test
     fun neverReportsNegativeRemainingTime() {
         assertEquals(0L, session.remainingMillis(nowElapsedRealtime = 90_000L))
         assertEquals(0, session.remainingSeconds(nowElapsedRealtime = 90_000L))

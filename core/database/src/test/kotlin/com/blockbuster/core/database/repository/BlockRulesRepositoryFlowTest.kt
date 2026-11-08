@@ -2,6 +2,7 @@ package com.blockbuster.core.database.repository
 
 import com.blockbuster.core.common.model.BlockRuleDraft
 import com.blockbuster.core.common.model.BlockRuleType
+import com.blockbuster.core.common.model.ProtectionPreset
 import com.blockbuster.core.common.result.AppResult
 import com.blockbuster.core.database.RepositoryTestFixture
 import kotlinx.coroutines.flow.first
@@ -46,6 +47,32 @@ class BlockRulesRepositoryFlowTest {
 
         assertEquals(1, active.size)
         assertEquals("active.example", active.first().pattern)
+    }
+
+    @Test
+    fun observeActiveRulesIncludesEnabledPresetRules() = runTest {
+        val repository = fixture.repository(UnconfinedTestDispatcher(testScheduler))
+        fixture.presetRepository.setPresetEnabled(ProtectionPreset.SHORT_VIDEOS, true)
+
+        val active = repository.observeActiveRules().first()
+
+        assertTrue(
+            active.any { rule ->
+                rule.type == BlockRuleType.PACKAGE &&
+                    rule.pattern == "com.zhiliaoapp.musically"
+            },
+        )
+    }
+
+    @Test
+    fun disablingPresetRemovesItsSyntheticRules() = runTest {
+        val repository = fixture.repository(UnconfinedTestDispatcher(testScheduler))
+        fixture.presetRepository.setPresetEnabled(ProtectionPreset.ADULT_CONTENT, true)
+        assertTrue(repository.observeActiveRules().first().isNotEmpty())
+
+        fixture.presetRepository.setPresetEnabled(ProtectionPreset.ADULT_CONTENT, false)
+
+        assertTrue(repository.observeActiveRules().first().isEmpty())
     }
 
     @Test

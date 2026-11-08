@@ -3,19 +3,29 @@ package com.blockbuster.core.overlay
 import android.content.Context
 import android.util.Log
 import com.blockbuster.core.common.contract.BlockRulesRepository
+import com.blockbuster.core.common.contract.BlocklistRepository
+import com.blockbuster.core.common.contract.FocusSessionRepository
 import com.blockbuster.core.common.contract.FrictionConfig
 import com.blockbuster.core.common.contract.FrictionMode
 import com.blockbuster.core.common.contract.OverlayController
+import com.blockbuster.core.common.contract.PremiumRepository
 import com.blockbuster.core.common.event.BlockEventBus
 import com.blockbuster.core.common.event.ProtectionEventBus
 import com.blockbuster.core.common.model.BlockTimer
 import com.blockbuster.core.common.model.BlockRule
+import com.blockbuster.core.common.model.BlocklistEntry
 import com.blockbuster.core.common.model.DetectionSignal
+import com.blockbuster.core.common.model.FocusSession
+import com.blockbuster.core.common.model.IsPremiumState
+import com.blockbuster.core.common.model.PremiumSettings
 import com.blockbuster.core.common.model.ProtectionThreat
 import com.blockbuster.core.common.model.ProtectionThreatType
 import com.blockbuster.core.common.model.SensitiveScreenCategory
 import com.blockbuster.core.common.result.AppResult
+import com.blockbuster.core.overlay.focus.FocusModeRuleProvider
 import com.blockbuster.core.overlay.matching.BlockRuleMatcher
+import com.blockbuster.core.overlay.matching.BlocklistMatcher
+import com.blockbuster.core.overlay.premium.PremiumRuleProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,7 +51,13 @@ class OverlayCoordinator @Inject constructor(
     private val protectionEventBus: ProtectionEventBus,
     private val overlayController: OverlayController,
     private val repository: BlockRulesRepository,
+    private val blocklistRepository: BlocklistRepository,
+    private val focusSessionRepository: FocusSessionRepository,
+    private val premiumRepository: PremiumRepository,
     private val matcher: BlockRuleMatcher,
+    private val blocklistMatcher: BlocklistMatcher,
+    private val focusModeRuleProvider: FocusModeRuleProvider,
+    private val premiumRuleProvider: PremiumRuleProvider,
     @OverlayScope private val scope: CoroutineScope,
 ) {
     private val rules = repository.observeActiveRules()
@@ -49,6 +65,32 @@ class OverlayCoordinator @Inject constructor(
 
     private val timer = repository.observeTimer()
         .stateIn(scope, SharingStarted.Eagerly, null)
+
+    private val blocklistEntries = blocklistRepository.observeEntries()
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    private val focusSession = focusSessionRepository.observeSession()
+        .stateIn(scope, SharingStarted.Eagerly, FocusSession())
+
+    private val premiumState = premiumRepository.observePremiumState()
+        .stateIn(scope, SharingStarted.Eagerly, IsPremiumState())
+
+    private val premiumSettings = premiumRepository.observeSettings()
+        .stateIn(scope, SharingStarted.Eagerly, PremiumSettings())
+
+    private val externalContext = combine(
+        blocklistEntries,
+        focusSession,
+        premiumState,
+        premiumSettings,
+    ) { entries, session, premium, settings ->
+        ExternalContext(
+            blocklistEntries = entries,
+            focusSession = session,
+            isPremium = premium.isPremium,
+            premiumSettings = settings,
+        )
+    }
 
     private val _state = MutableStateFlow<OverlayState>(OverlayState.Idle)
     val state: StateFlow<OverlayState> = _state.asStateFlow()
@@ -73,12 +115,17 @@ class OverlayCoordinator @Inject constructor(
                 rules,
                 timer,
                 overlayController.isOverlayVisible,
-            ) { detection, currentRules, currentTimer, overlayVisible ->
+                externalContext,
+            ) { detection, currentRules, currentTimer, overlayVisible, context ->
                 CoordinatorSnapshot(
                     detection = detection,
                     rules = currentRules,
                     timer = currentTimer,
                     overlayVisible = overlayVisible,
+                    blocklistEntries = context.blocklistEntries,
+                    focusSession = context.focusSession,
+                    isPremium = context.isPremium,
+                    premiumSettings = context.premiumSettings,
                 )
             }
                 .distinctUntilChanged()
@@ -124,10 +171,39 @@ class OverlayCoordinator @Inject constructor(
     private fun onSnapshot(snapshot: CoordinatorSnapshot) {
         if (protectionActive) return
         val detection = snapshot.detection
+
+        if (blocklistMatcher.isWhitelisted(
+                packageName = detection?.packageName,
+                target = detection?.target,
+                className = detection?.className,
+                entries = snapshot.blocklistEntries,
+            )
+        ) {
+            if (snapshot.overlayVisible) {
+                overlayController.hideFriction()
+            }
+            currentActivation = null
+            dismissedActivation = null
+            auditedActivation = null
+            _state.value = OverlayState.Idle
+            return
+        }
+
+        val effectiveRules = buildList {
+            addAll(snapshot.rules)
+            addAll(blocklistMatcher.blacklistRules(snapshot.blocklistEntries))
+            if (snapshot.isPremium && snapshot.premiumSettings.strictShortsReels) {
+                addAll(premiumRuleProvider.strictShortsReelsRules())
+            }
+            addAll(focusModeRuleProvider.rules(snapshot.focusSession))
+        }
+
         val match = matcher.findMatch(
             target = detection?.target,
-            rules = snapshot.rules,
+            rules = effectiveRules,
             detectedAtEpochMillis = detection?.timestampEpochMillis ?: 0L,
+            packageName = detection?.packageName,
+            className = detection?.className,
         )
         val activationKey = match?.let { BlockActivationKey(it.rule.id, it.normalizedTarget) }
 
@@ -180,7 +256,16 @@ class OverlayCoordinator @Inject constructor(
             match = match,
             audited = activationKey == auditedActivation,
         )
-        overlayController.showFriction(buildConfig(match))
+        overlayController.showFriction(
+            buildConfig(
+                match = match,
+                frictionWindowMillis = if (snapshot.isPremium) {
+                    snapshot.premiumSettings.frictionWindowMillis
+                } else {
+                    PremiumSettings.DEFAULT_FRICTION_WINDOW_MILLIS
+                },
+            ),
+        )
 
         if (activationKey != null && activationKey != auditedActivation) {
             auditedActivation = activationKey
@@ -266,12 +351,16 @@ class OverlayCoordinator @Inject constructor(
         )
     }
 
-    private fun buildConfig(match: BlockMatch): FrictionConfig = FrictionConfig(
+    private fun buildConfig(
+        match: BlockMatch,
+        frictionWindowMillis: Long,
+    ): FrictionConfig = FrictionConfig(
         packageName = match.target,
         appLabel = match.rule.pattern,
         title = context.getString(R.string.overlay_friction_title),
         message = context.getString(R.string.overlay_friction_message, match.rule.pattern),
         dismissLabel = context.getString(R.string.overlay_friction_dismiss),
+        frictionWindowMillis = frictionWindowMillis,
     )
 
     private fun auditBlock(match: BlockMatch) {
@@ -295,6 +384,17 @@ class OverlayCoordinator @Inject constructor(
         val rules: List<BlockRule>,
         val timer: BlockTimer?,
         val overlayVisible: Boolean,
+        val blocklistEntries: List<BlocklistEntry>,
+        val focusSession: FocusSession,
+        val isPremium: Boolean,
+        val premiumSettings: PremiumSettings,
+    )
+
+    private data class ExternalContext(
+        val blocklistEntries: List<BlocklistEntry>,
+        val focusSession: FocusSession,
+        val isPremium: Boolean,
+        val premiumSettings: PremiumSettings,
     )
 
     private companion object {

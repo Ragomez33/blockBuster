@@ -100,7 +100,8 @@ detecciones del mismo objetivo y verificar que no se duplica el registro.
 
 ### Edge Cases
 
-- Qué ocurre si el evento de detección no incluye un objetivo utilizable (URL o palabra clave)?
+- Qué ocurre si el evento de detección no incluye un objetivo textual utilizable (URL o palabra clave) pero sí un paquete o una clase de pantalla?
+- Qué ocurre si una regla de palabra clave coincide con la clase de pantalla pero no con el texto visible?
 - Qué ocurre si varias reglas activas coinciden con el mismo objetivo?
 - Qué ocurre si la regla se deshabilita o elimina mientras el overlay está visible?
 - Qué ocurre si el objetivo cambia varias veces en menos de un segundo?
@@ -118,9 +119,9 @@ detecciones del mismo objetivo y verificar que no se duplica el registro.
 ### Functional Requirements
 
 - **FR-001**: El sistema MUST recopilar los eventos de detección emitidos por el servicio de accesibilidad mediante un flujo reactivo compartido.
-- **FR-002**: Cada evento de detección MUST exponer el objetivo detectado (URL o palabra clave) y una marca de tiempo para poder evaluarlo.
+- **FR-002**: Cada evento de detección MUST exponer el objetivo textual detectado (URL o palabra clave), el paquete de la aplicación, la clase de pantalla cuando esté disponible y una marca de tiempo para poder evaluarlo.
 - **FR-003**: El sistema MUST evaluar las reglas activas de forma asíncrona, sin bloquear el hilo principal.
-- **FR-004**: El sistema MUST considerar que hay coincidencia cuando una regla activa corresponde al objetivo detectado según el tipo de regla.
+- **FR-004**: El sistema MUST considerar que hay coincidencia cuando una regla activa corresponde a la detección según su tipo: dominio contra el objetivo textual, firma de paquete contra el paquete, o palabra clave contra el objetivo textual y la clase de pantalla.
 - **FR-005**: El sistema MUST mostrar el overlay cuando exista coincidencia y MUST ocultarlo cuando no exista.
 - **FR-006**: El overlay MUST cubrir toda la pantalla y MUST consumir los eventos táctiles para que la aplicación de fondo no reciba interacción.
 - **FR-007**: El overlay MUST permanecer visible hasta que la persona usuaria lo cierre, el objetivo deje de coincidir o el bloqueo ya no sea aplicable.
@@ -137,14 +138,16 @@ detecciones del mismo objetivo y verificar que no se duplica el registro.
 - **FR-018**: El sistema MUST permitir que la persona usuaria cierre la pantalla de fricción mediante una acción explícita.
 - **FR-019**: El sistema MUST reducir los eventos duplicados en ráfaga sin perder la primera detección válida.
 - **FR-020**: El sistema MUST funcionar tanto si el coordinador vive como singleton de aplicación como si se ejecuta dentro del servicio de monitoreo.
+- **FR-021**: El sistema MUST evaluar de forma transparente las reglas generadas por los presets maestros habilitados además de las reglas persistidas.
+- **FR-022**: Una regla de firma de paquete MUST poder producir una coincidencia aunque el evento no incluya un objetivo textual.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Evento de detección**: Señal emitida cuando el servicio de accesibilidad identifica un objetivo potencialmente bloqueable. Contiene el objetivo (URL o palabra clave), el contexto de la aplicación y la marca de tiempo.
-- **Coincidencia de bloqueo**: Resultado de evaluar un objetivo contra las reglas activas. Contiene la regla aplicada y el objetivo bloqueado.
+- **Evento de detección**: Señal emitida cuando el servicio de accesibilidad identifica un objetivo potencialmente bloqueable. Contiene el objetivo textual opcional (URL o palabra clave), el paquete, la clase de pantalla y la marca de tiempo.
+- **Coincidencia de bloqueo**: Resultado de evaluar una detección contra las reglas activas. Contiene la regla aplicada y el objetivo o paquete bloqueado.
 - **Estado de bloqueo del overlay**: Indica si el overlay está visible, qué objetivo representa y si la activación ya fue auditada.
 - **Registro de auditoría**: Entrada local inmutable con regla, objetivo y momento del bloqueo, usada para estadísticas e historial.
-- **Regla activa**: Criterio habilitado que puede producir un bloqueo; su tipo determina cómo se compara con el objetivo.
+- **Regla activa**: Criterio habilitado que puede producir un bloqueo; su tipo determina cómo se compara con la detección. Puede estar persistida en Room o generada por un preset maestro habilitado.
 
 ## Success Criteria *(mandatory)*
 
@@ -158,12 +161,15 @@ detecciones del mismo objetivo y verificar que no se duplica el registro.
 - **SC-006**: La evaluación de reglas no produce bloqueos del hilo principal ni pausas perceptibles en la interfaz.
 - **SC-007**: El 100 % de los fallos simulados de auditoría se toleran sin impedir el bloqueo visual.
 - **SC-008**: El 100 % de las detecciones con coincidencia y sin permiso de superposición terminan sin cierre inesperado y con un diagnóstico disponible.
+- **SC-009**: El 100 % de las detecciones de un paquete con firma activa producen coincidencia aunque no exista objetivo textual.
 
 ## Assumptions
 
 - El servicio de accesibilidad puede proporcionar el objetivo detectable (URL o palabra clave) en el evento; si hoy no lo hace, se requiere una extensión del servicio como dependencia de esta feature.
-- Para reglas de dominio, la coincidencia es por host exacto o subdominio del patrón, sin distinguir mayúsculas y minúsculas. Para palabras clave, es una contención sin distinguir mayúsculas y minúsculas.
+- Para reglas de dominio, la coincidencia es por host exacto o subdominio del patrón, sin distinguir mayúsculas y minúsculas. Para palabras clave, es una contención sin distinguir mayúsculas y minúsculas sobre el texto detectado y la clase de pantalla. Para firmas de paquete, es una coincidencia exacta del identificador o de sus subpaquetes.
 - Cuando varias reglas coinciden, se aplica la primera regla activa según el orden determinista definido por el repositorio; se audita una sola activación.
+- Las reglas activas incluyen las reglas persistidas y las generadas por los presets maestros habilitados; el coordinador no distingue su origen.
+- Las firmas de paquete permiten bloquear aplicaciones completas, mientras que las palabras clave sobre la clase de pantalla permiten bloquear vistas concretas como feeds de Reels o Shorts.
 - Una "activación" es la transición de no bloqueado a bloqueado para un objetivo. Las detecciones repetidas del mismo objetivo mientras el overlay sigue visible no generan nuevas auditorías.
 - Cerrar manualmente el overlay finaliza el bloqueo del objetivo actual. Una nueva detección del mismo objetivo puede volver a activarlo.
 - El bloqueo total de inicio y recientes requiere privilegios de dispositivo propietario, modo kiosco o administración del dispositivo. Sin ellos, el sistema aplica la mejor contención disponible y no promete suprimir por completo esos botones.

@@ -10,12 +10,13 @@ data class FrictionSession(
     val target: String,
     val requiredText: String,
     val startedAtElapsedRealtime: Long,
+    val windowMillis: Long = WINDOW_MILLIS,
     val input: String = "",
     val warningVisible: Boolean = false,
     val warningUntilElapsedRealtime: Long? = null,
 ) {
     fun remainingMillis(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()): Long =
-        (WINDOW_MILLIS - (nowElapsedRealtime - startedAtElapsedRealtime)).coerceAtLeast(0L)
+        (windowMillis - (nowElapsedRealtime - startedAtElapsedRealtime)).coerceAtLeast(0L)
 
     fun remainingSeconds(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()): Int =
         ((remainingMillis(nowElapsedRealtime) + 999L) / 1_000L).toInt()

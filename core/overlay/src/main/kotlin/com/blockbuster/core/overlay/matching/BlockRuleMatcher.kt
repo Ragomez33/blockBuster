@@ -8,5 +8,7 @@ interface BlockRuleMatcher {
         target: String?,
         rules: List<BlockRule>,
         detectedAtEpochMillis: Long,
+        packageName: String? = null,
+        className: String? = null,
     ): BlockMatch?
 }

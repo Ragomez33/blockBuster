@@ -1,4 +1,4 @@
-﻿package com.blockbuster.core.overlay
+package com.blockbuster.core.overlay
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -10,6 +10,12 @@ import com.blockbuster.core.common.model.DetectionEvent
 import com.blockbuster.core.overlay.matching.DefaultBlockRuleMatcher
 import com.blockbuster.core.overlay.support.FakeBlockRulesRepository
 import com.blockbuster.core.overlay.support.FakeOverlayController
+import com.blockbuster.core.overlay.focus.FocusModeRuleProvider
+import com.blockbuster.core.overlay.matching.BlocklistMatcher
+import com.blockbuster.core.overlay.premium.PremiumRuleProvider
+import com.blockbuster.core.overlay.support.FakeBlocklistRepository
+import com.blockbuster.core.overlay.support.FakeFocusSessionRepository
+import com.blockbuster.core.overlay.support.FakePremiumRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -54,6 +60,36 @@ class OverlayCoordinatorTest {
         assertTrue(overlay.isOverlayVisible.value)
         assertTrue(coordinator.state.value is OverlayState.Blocking)
         assertEquals("example.com", overlay.shownConfig?.appLabel)
+    }
+
+    @Test
+    fun showsOverlayWhenPackageSignatureMatches() = runTest {
+        repository.activeRules.value = listOf(
+            BlockRule(
+                id = -1L,
+                pattern = "com.zhiliaoapp.musically",
+                type = BlockRuleType.PACKAGE,
+                isEnabled = true,
+                createdAt = 0L,
+            ),
+        )
+        val coordinator = createCoordinator()
+        coordinator.start()
+        advanceUntilIdle()
+
+        eventBus.publish(
+            DetectionEvent.ScreenDetected(
+                packageName = "com.zhiliaoapp.musically",
+                className = "com.ss.android.ugc.aweme.main.MainActivity",
+                timestampEpochMillis = 1_000L,
+                target = null,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, overlay.showCount)
+        assertTrue(overlay.isOverlayVisible.value)
+        assertTrue(coordinator.state.value is OverlayState.Blocking)
     }
 
     @Test
@@ -112,7 +148,13 @@ class OverlayCoordinatorTest {
         protectionEventBus = MutableProtectionEventBus(),
         overlayController = overlay,
         repository = repository,
+        blocklistRepository = FakeBlocklistRepository(),
+        focusSessionRepository = FakeFocusSessionRepository(),
+        premiumRepository = FakePremiumRepository(),
         matcher = DefaultBlockRuleMatcher(),
+        blocklistMatcher = BlocklistMatcher(),
+        focusModeRuleProvider = FocusModeRuleProvider(),
+        premiumRuleProvider = PremiumRuleProvider(),
         scope = scope,
     )
 

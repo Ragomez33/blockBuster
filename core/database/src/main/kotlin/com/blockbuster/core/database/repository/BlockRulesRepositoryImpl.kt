@@ -1,6 +1,7 @@
 package com.blockbuster.core.database.repository
 
 import com.blockbuster.core.common.contract.BlockRulesRepository
+import com.blockbuster.core.common.contract.ProtectionPresetRepository
 import com.blockbuster.core.common.model.BlockLog
 import com.blockbuster.core.common.model.BlockRule
 import com.blockbuster.core.common.model.BlockRuleDraft
@@ -15,9 +16,11 @@ import com.blockbuster.core.database.di.IoDispatcher
 import com.blockbuster.core.database.entity.BlockLogEntity
 import com.blockbuster.core.database.entity.toDomain
 import com.blockbuster.core.database.entity.toEntity
+import com.blockbuster.core.database.preset.ProtectionPresetCatalog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -29,13 +32,19 @@ class BlockRulesRepositoryImpl @Inject constructor(
     private val blockRuleDao: BlockRuleDao,
     private val blockLogDao: BlockLogDao,
     private val timerDataSource: BlockTimerDataSource,
+    private val presetRepository: ProtectionPresetRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : BlockRulesRepository {
 
     override fun observeActiveRules(): Flow<List<BlockRule>> =
-        blockRuleDao.observeActiveRules()
-            .map { entities -> entities.map { it.toDomain() } }
-            .flowOn(ioDispatcher)
+        combine(
+            blockRuleDao.observeActiveRules()
+                .map { entities -> entities.map { it.toDomain() } },
+            presetRepository.observeEnabledPresets(),
+        ) { manualRules, enabledPresets ->
+            (manualRules + ProtectionPresetCatalog.activeRules(enabledPresets))
+                .sortedBy { rule -> rule.id }
+        }.flowOn(ioDispatcher)
 
     override fun observeAllRules(): Flow<List<BlockRule>> =
         blockRuleDao.observeAllRules()

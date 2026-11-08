@@ -13,14 +13,24 @@ class FrictionSessionStore(
     var current: FrictionSession? = null
         private set
 
-    fun obtain(target: String, requiredText: String): FrictionSession {
+    fun obtain(
+        target: String,
+        requiredText: String,
+        windowMillis: Long = FrictionSession.WINDOW_MILLIS,
+    ): FrictionSession {
         val existing = current
-        if (existing != null && existing.target == target) return existing
+        if (existing != null &&
+            existing.target == target &&
+            existing.windowMillis == windowMillis
+        ) {
+            return existing
+        }
 
         return FrictionSession(
             target = target,
             requiredText = requiredText,
             startedAtElapsedRealtime = nowElapsedRealtime(),
+            windowMillis = windowMillis,
         ).also { current = it }
     }
 

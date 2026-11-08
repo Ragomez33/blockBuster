@@ -1,5 +1,9 @@
 package com.blockbuster.app.di
 
+import com.blockbuster.app.onboarding.OnboardingIntents
+import com.blockbuster.app.onboarding.OnboardingSettingsLauncher
+import com.blockbuster.app.protection.PermissionStatusProvider
+import com.blockbuster.app.protection.ProtectionHealthChecker
 import com.blockbuster.core.common.event.BlockEventBus
 import com.blockbuster.core.common.event.MutableBlockEventBus
 import com.blockbuster.core.common.event.MutableProtectionEventBus
@@ -24,4 +28,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideProtectionEventBus(): ProtectionEventBus = MutableProtectionEventBus()
+
+    @Provides
+    @Singleton
+    fun providePermissionStatusProvider(
+        checker: ProtectionHealthChecker,
+    ): PermissionStatusProvider = checker
+
+    @Provides
+    @Singleton
+    fun provideOnboardingSettingsLauncher(): OnboardingSettingsLauncher = OnboardingIntents
 }

@@ -39,3 +39,6 @@
   especificación ni se creó una rama de git.
 - No quedaron marcadores `[NEEDS CLARIFICATION]`: las ambigüedades se
   resolvieron con supuestos razonables documentados.
+- Actualizada para incluir los tipos `PACKAGE` y `KEYWORD`, y la combinación
+  reactiva de reglas persistidas con las reglas generadas por los presets
+  maestros habilitados (`006-preset-master-dashboard`).

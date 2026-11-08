@@ -13,12 +13,22 @@ class DefaultBlockRuleMatcher @Inject constructor() : BlockRuleMatcher {
         target: String?,
         rules: List<BlockRule>,
         detectedAtEpochMillis: Long,
+        packageName: String?,
+        className: String?,
     ): BlockMatch? {
         val rawTarget = target?.trim().orEmpty()
-        if (rawTarget.isEmpty()) return null
+        val normalizedPackage = packageName?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        val normalizedClassName = className?.trim()?.takeIf { it.isNotEmpty() }
+        if (rawTarget.isEmpty() && normalizedPackage == null && normalizedClassName == null) {
+            return null
+        }
 
         val targetHost = normalizeHost(rawTarget)
         val lowerTarget = rawTarget.lowercase()
+        val keywordHaystack = listOfNotNull(
+            rawTarget.takeIf { it.isNotEmpty() },
+            normalizedClassName,
+        ).joinToString(" ").lowercase()
 
         return rules.asSequence()
             .filter { rule -> rule.isEnabled && rule.pattern.isNotBlank() }
@@ -26,15 +36,36 @@ class DefaultBlockRuleMatcher @Inject constructor() : BlockRuleMatcher {
             .firstNotNullOfOrNull { rule ->
                 when (rule.type) {
                     BlockRuleType.DOMAIN -> {
-                        val patternHost = normalizeHost(rule.pattern)
-                        if (patternHost != null &&
-                            targetHost != null &&
-                            (targetHost == patternHost || targetHost.endsWith(".$patternHost"))
+                        if (rawTarget.isEmpty()) {
+                            null
+                        } else {
+                            val patternHost = normalizeHost(rule.pattern)
+                            if (patternHost != null &&
+                                targetHost != null &&
+                                (targetHost == patternHost || targetHost.endsWith(".$patternHost"))
+                            ) {
+                                BlockMatch(
+                                    rule = rule,
+                                    target = rawTarget,
+                                    normalizedTarget = targetHost,
+                                    detectedAtEpochMillis = detectedAtEpochMillis,
+                                )
+                            } else {
+                                null
+                            }
+                        }
+                    }
+
+                    BlockRuleType.PACKAGE -> {
+                        val packagePattern = rule.pattern.trim().lowercase()
+                        if (normalizedPackage != null &&
+                            (normalizedPackage == packagePattern ||
+                                normalizedPackage.startsWith("$packagePattern."))
                         ) {
                             BlockMatch(
                                 rule = rule,
-                                target = rawTarget,
-                                normalizedTarget = targetHost,
+                                target = normalizedPackage,
+                                normalizedTarget = normalizedPackage,
                                 detectedAtEpochMillis = detectedAtEpochMillis,
                             )
                         } else {
@@ -42,14 +73,17 @@ class DefaultBlockRuleMatcher @Inject constructor() : BlockRuleMatcher {
                         }
                     }
 
+                    BlockRuleType.KEYWORD,
                     BlockRuleType.KEYWORD_SHORTS,
                     BlockRuleType.KEYWORD_REELS,
                     -> {
-                        if (lowerTarget.contains(rule.pattern.lowercase())) {
+                        if (keywordHaystack.contains(rule.pattern.lowercase())) {
                             BlockMatch(
                                 rule = rule,
-                                target = rawTarget,
-                                normalizedTarget = lowerTarget,
+                                target = rawTarget.ifEmpty {
+                                    normalizedClassName ?: normalizedPackage.orEmpty()
+                                },
+                                normalizedTarget = keywordHaystack,
                                 detectedAtEpochMillis = detectedAtEpochMillis,
                             )
                         } else {
@@ -75,6 +109,7 @@ class DefaultBlockRuleMatcher @Inject constructor() : BlockRuleMatcher {
 
         return host.takeIf { it.isNotBlank() && !it.contains(' ') }
     }
+
     private companion object {
         val URL_REGEX = Regex("""(?i)(https?://[^\s]+|www\.[^\s]+)""")
     }

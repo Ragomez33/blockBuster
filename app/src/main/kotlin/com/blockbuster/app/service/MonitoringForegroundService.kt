@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.blockbuster.app.MainActivity
 import com.blockbuster.app.R
+import com.blockbuster.app.focus.FocusSessionCoordinator
 import com.blockbuster.core.common.contract.ProtectionStateRepository
 import com.blockbuster.core.overlay.OverlayCoordinator
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,10 +41,14 @@ class MonitoringForegroundService : Service() {
     @Inject
     lateinit var protectionStateRepository: ProtectionStateRepository
 
+    @Inject
+    lateinit var focusSessionCoordinator: FocusSessionCoordinator
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
+        focusSessionCoordinator.start()
         createNotificationChannel()
         if (!startAsForeground()) {
             stopSelf()

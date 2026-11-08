@@ -7,6 +7,7 @@ sealed interface AppResult<out T> {
 
 sealed interface AppError {
     data class NotFound(val message: String) : AppError
+    data class Conflict(val message: String) : AppError
     data class Storage(val message: String, val cause: Throwable? = null) : AppError
     data class Permission(val permission: String) : AppError
     data class Unexpected(val message: String, val cause: Throwable? = null) : AppError
